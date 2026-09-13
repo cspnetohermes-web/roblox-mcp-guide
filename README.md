@@ -38,7 +38,10 @@ Com isso, você pode:
 |------|---------------|
 | **Roblox Studio** | Build 0.738+ (MCP embutido) |
 | **Hermes Agent** | Última versão |
+| **Windows 10/11** | Qualquer versão recente |
 | **macOS** | 12+ (Monterey ou superior) |
+
+> ⚠️ Funciona tanto no **Windows** quanto no **macOS**! Os comandos para cada sistema estão indicados abaixo.
 
 ---
 
@@ -63,7 +66,9 @@ Abra o arquivo de configuração do Hermes:
 ~/.hermes/config.yaml
 ```
 
-Adicione a seguinte configuração:
+Adicione a seguinte configuração (escolha de acordo com seu sistema):
+
+### macOS
 
 ```yaml
 mcp_servers:
@@ -71,24 +76,20 @@ mcp_servers:
     command: /Applications/RobloxStudio.app/Contents/MacOS/StudioMCP
 ```
 
-### No macOS, o caminho completo é:
-
-```
-/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP
-```
-
-### Exemplo completo do `config.yaml`:
+### Windows
 
 ```yaml
-# Configuração do Hermes
-# ...
-
 mcp_servers:
   Roblox_Studio:
-    command: /Applications/RobloxStudio.app/Contents/MacOS/StudioMCP
-
-# Outras configurações...
+    command: cmd.exe
+    args: ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"]
 ```
+
+> **Dica:** No Windows, o `mcp.bat` fica na pasta `%LOCALAPPDATA%\Roblox\`. Se não existir, crie um arquivo de texto com o conteúdo:
+> ```
+> @echo off
+> "%~dp0RobloxStudioBeta.exe" -MCP
+> ```
 
 ---
 
@@ -264,8 +265,9 @@ print("Olá do Hermes!")
 
 - O MCP do Roblox Studio usa transporte **stdio** (comunicação via terminal)
 - O servidor MCP é embutido no Roblox Studio (não é um plugin externo)
-- Funciona apenas no **macOS** e **Windows**
+- Funciona no **macOS** e **Windows**
 - O Hermes precisa ser reiniciado após mudanças no `config.yaml`
+- No Windows, se o `mcp.bat` não existir, crie-o manualmente na pasta `%LOCALAPPDATA%\Roblox\`
 
 ---
 
