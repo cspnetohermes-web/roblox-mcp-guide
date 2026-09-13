@@ -262,115 +262,194 @@ print("Olá do Hermes!")
 
 ---
 
-## 🧩 Problemas Encontrados e Soluções
 
-Durante o desenvolvimento deste guia, encontramos vários problemas. Documentamos aqui para ajudar você:
+## 🧩 Problemas Reais: Configurando o Hermes + Roblox Studio
+
+Durante a configuração inicial, enfrentamos vários problemas. Documentamos aqui para que você saiba exatamente o que fazer quando eles acontecerem com você.
 
 ---
 
-### ❌ Erro: "gh CLI não encontrado"
+### ❌ Problema 1: O Hermes dizia que "MCP não existia"
 
-**Situação:** O `gh` (GitHub CLI) não veio instalado no macOS.
+**O que aconteceu:**
+O assistente inicialmente afirmou que não havia servidor MCP para Roblox Studio e sugeriu usar AppleScript para gravar a tela ou clicar no Studio manualmente.
 
-**Solução:** Fizemos autenticação via Device Flow manual usando `curl`:
+**Solução:**
+O MCP **existe sim** e é oficial! O que aconteceu foi:
+1. O toggle "Enable Studio as MCP server" estava desligado
+2. O Hermes não havia sido reiniciado após a configuração
 
-```bash
-# 1. Solicitar código
-curl -s -X POST -H "Accept: application/json" \
-  -d "client_id=178c6fc778ccc68e1d6a&scope=repo,read:org,gist" \
-  https://github.com/login/device/code
+**O que fazer:**
+1. No Roblox Studio: **Assistant → ⋯ → Manage MCP Servers → Enable Studio as MCP server = ON**
+2. Verifique se aparece **"1 client connected"** no canto inferior direito
+3. Reinicie o Hermes
 
-# 2. Usuário acessa https://github.com/login/device e insere o código
+---
 
-# 3. Polling para obter o token
-curl -s -X POST -H "Accept: application/json" \
-  -d "client_id=178c6fc778ccc68e1d6a&device_code=XXXX&grant_type=urn:ietf:params:oauth:grant-type:device_code" \
-  https://github.com/login/oauth/access_token
+### ❌ Problema 2: "MCP server unreachable"
+
+**O que aconteceu:**
+Após configurar o `config.yaml`, o Hermes ainda não conseguia se conectar.
+
+**Causas possíveis:**
+- O lugar não estava aberto no **Edit Mode** (estava em Play Mode)
+- O toggle do MCP não estava ligado
+- O Hermes não foi reiniciado após editar o `config.yaml`
+
+**Solução:**
+1. Feche o Roblox Studio completamente
+2. Reabra o lugar no **Edit Mode**
+3. Reative o MCP
+4. Reinicie o Hermes
+5. Verifique se aparece "1 client connected"
+
+---
+
+### ❌ Problema 3: "Edit datamodel is not available in Play mode"
+
+**O que aconteceu:**
+O Hermes tentou executar scripts de edição enquanto o jogo estava rodando (Play Mode).
+
+**Solução:**
+Sempre use `start_stop_play` com `is_start: false` antes de editar:
+
+```
+Parar o jogo → Editar → Iniciar o jogo
 ```
 
-O token é salvo em `~/.config/gh/hosts.yml`.
+Ou use o parâmetro `datamodel_type: "Edit"` no `execute_luau`.
 
 ---
 
-### ❌ Erro: "LoadAnimation requires an Animation object"
+### ❌ Problema 4: O Hermes não conseguia ler a seleção do Studio
 
-**Situação:** Tentamos adicionar animação de caminhada nos NPCs usando `Animator:LoadAnimation()` com um local `KeyframeSequence`, mas o Roblox rejeita.
+**O que aconteceu:**
+Quando você selecionava um objeto no Studio, o Hermes tentava usar `game.Selection:Get()` mas não funcionava.
 
-**Causa:** O Roblox exige que animações sejam assets hospedados no servidor (Animation IDs), não aceita KeyframeSequence local.
+**Causa:**
+O `game.Selection` só funciona em scripts que rodam **dentro** do Studio (Command Bar, Plugin). O Hermes executa scripts via MCP em outro processo.
 
-**Solução:** Usamos `Humanoid:MoveTo()` para movimentação — o Humanoid R6 já tem animação de caminhada embutida que toca automaticamente ao se mover.
+**Solução:**
+Diga o nome do objeto selecionado em palavras:
+
+> "O objeto que eu selecionei se chama **JardimEsquerdo**"
+
+Ou use `search_game_tree` para ver a hierarquia e depois `inspect_instance` para ver a posição:
+
+```
+Workspace → Cidade → JardimEsquerdo
+```
 
 ---
 
-### ❌ Erro: "Edit datamodel is not available in Play mode"
+### ❌ Problema 5: Posições erradas ao mover objetos
 
-**Situação:** Tentamos executar scripts de edição enquanto o jogo estava rodando.
+**O que aconteceu:**
+Ao tentar mover árvores para posições específicas (-12, 0.12, 13), os objetos ficaram em lugares errados.
 
-**Solução:** Sempre parar o playtest antes de editar:
+**Causa:**
+O `Position` de um **Model** (não uma Part) pode não refletir a posição real. É preciso usar `WorldPivot.Position` para mover modelos.
+
+**Solução:**
+Sempre use `WorldPivot` para mover modelos:
 
 ```lua
--- Use o parâmetro correto
-datamodel_type: "Edit"  -- para editar
-datamodel_type: "Client" -- para rodar no cliente
-datamodel_type: "Server" -- para rodar no servidor
+local model = workspace.ModelName
+model.WorldPivot = CFrame.new(x, y, z)
 ```
 
-Ou use a ferramenta `start_stop_play` com `is_start: false` antes de editar.
-
----
-
-### ❌ Erro: Scripts com sintaxe Lua inválida
-
-**Situação:** O assistente às vezes gerava código com erros (ex: `Enum.Material.Skin` não existe).
-
-**Solução:** Sempre verifique o código antes de executar. Se der erro, corrija e tente novamente.
-
-Materiais válidos comuns:
-- `Enum.Material.SmoothPlastic`
-- `Enum.Material.Concrete`
-- `Enum.Material.Brick`
-- `Enum.Material.Wood`
-- `Enum.Material.Grass`
-- `Enum.Material.Marble`
-- `Enum.Material.Slate`
-- `Enum.Material.Glass`
-- `Enum.Material.Metal`
-- `Enum.Material.Neon`
-
----
-
-### ❌ Erro: Pedestres não se movem após edição
-
-**Situação:** Os pedestres foram criados mas ficaram parados.
-
-**Causa:** O script de movimentação só funciona em Play Mode.
-
-**Solução:** Colocamos o script de controle no `ServerScriptService` para rodar automaticamente quando o jogo inicia.
-
----
-
-### ❌ Erro: GitHub token não persiste
-
-**Situação:** Após obter o token via device flow, o git não conseguia fazer push.
-
-**Solução:** Salvamos as credenciais em `~/.git-credentials`:
-
-```bash
-git config --global credential.helper store
-echo "https://usuario:token@github.com" > ~/.git-credentials
-chmod 600 ~/.git-credentials
+Para verificar a posição correta:
+```lua
+print(model.WorldPivot.Position)
 ```
 
 ---
 
-### ❌ Erro: Modelo "3 trees" tinha árvores mal posicionadas
+### ❌ Problema 6: Animações locais não funcionam
 
-**Situação:** Ao inserir o modelo "3 trees", as árvores ficaram em posições erradas.
+**O que aconteceu:**
+Tentamos adicionar animação de caminhada usando `Animator:LoadAnimation()` com um `KeyframeSequence` local (do modelo "Simple Walk Animation"). O erro apareceu:
 
-**Solução:** Sempre inspecione o modelo antes de posicionar:
-- Use `search_game_tree` para ver a hierarquia
-- Use `inspect_instance` para ver posições
-- Use `WorldPivot` para mover modelos
+> "LoadAnimation requires the asset id to not be empty"
+
+**Causa:**
+O Roblox **não aceita** animações locais via MCP. As animações precisam ser:
+1. Assets hospedados no servidor (Animation IDs do tipo `rbxassetid://XXXX`)
+2. Ou usar a animação padrão do Humanoid R6
+
+**Solução:**
+Use `Humanoid:MoveTo()` — o Roblox **automaticamente** toca a animação de caminhada padrão quando o Humanoid se move.
+
+---
+
+### ❌ Problema 7: Scripts com materiais inválidos
+
+**O que aconteceu:**
+O assistente tentou usar `Enum.Material.Skin` para o tom de pele dos NPCs. O erro apareceu:
+
+> "Skin is not a member of Enum.Material"
+
+**Solução:**
+Use materiais válidos do Roblox:
+
+```lua
+-- Materiais comuns
+Enum.Material.SmoothPlastic  -- padrão
+Enum.Material.Concrete       -- concreto
+Enum.Material.Brick          -- tijolo
+Enum.Material.Wood           -- madeira
+Enum.Material.Grass          -- grama
+Enum.Material.Marble         -- mármore
+Enum.Material.Slate          -- ardósia
+Enum.Material.Glass          -- vidro
+Enum.Material.Metal          -- metal
+Enum.Material.Neon           -- neon (brilha)
+```
+
+---
+
+### ❌ Problema 8: O Hermes não enxerga imagens locais
+
+**O que aconteceu:**
+Você enviou screenshots do Studio para o Hermes, mas ele dizia "não consigo ver nenhuma imagem".
+
+**Causa:**
+A ferramenta `vision_analyze` do Hermes não funciona com imagens locais (caminhos do tipo `/Users/...`). Ela só funciona com URLs da internet.
+
+**Solução:**
+Faça upload da imagem para um serviço gratuito (como [imgur.com](https://imgur.com)) e envie o link. Ou descreva o que você vê em palavras.
+
+---
+
+### ❌ Problema 9: "StudioMCP not found"
+
+**O que aconteceu:**
+O binário `/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP` não foi encontrado.
+
+**Causa:**
+Versão antiga do Roblox Studio (anterior ao Build 0.738).
+
+**Solução:**
+Atualize o Roblox Studio para a versão mais recente. O MCP é embutido a partir do build 0.738+.
+
+---
+
+### ✅ Checklist de Configuração Completa
+
+Se não funcionar, verifique **tudo** isto:
+
+- [ ] **Roblox Studio** está aberto no **Edit Mode** (não Play)
+- [ ] **Assistant → ⋯ → Manage MCP Servers → Enable Studio as MCP server = ON**
+- [ ] Aparece **"1 client connected"** no canto inferior direito do Studio
+- [ ] O arquivo `~/.hermes/config.yaml` tem a configuração correta:
+  ```yaml
+  mcp_servers:
+    Roblox_Studio:
+      command: /Applications/RobloxStudio.app/Contents/MacOS/StudioMCP
+  ```
+- [ ] O **Hermes foi reiniciado** após editar o `config.yaml`
+- [ ] O lugar está **salvo** e **aberto** (não é um template vazio)
+- [ ] Você está usando as ferramentas MCP (que começam com `mcp__Roblox_Studio__`)
 
 ---
 
