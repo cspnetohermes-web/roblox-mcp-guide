@@ -15,6 +15,7 @@
 7. [Ferramentas Disponíveis](#ferramentas-disponíveis)
 8. [Exemplos Práticos](#exemplos-práticos)
 9. [Solução de Problemas](#solução-de-problemas)
+10. [Problemas Encontrados e Soluções](#problemas-encontrados-e-soluções)
 
 ---
 
@@ -258,6 +259,118 @@ print("Olá do Hermes!")
 - [Hermes Agent](https://hermes-agent.nousresearch.com)
 - [Documentação MCP](https://modelcontextprotocol.io)
 - [Creator Store](https://create.roblox.com/store)
+
+---
+
+## 🧩 Problemas Encontrados e Soluções
+
+Durante o desenvolvimento deste guia, encontramos vários problemas. Documentamos aqui para ajudar você:
+
+---
+
+### ❌ Erro: "gh CLI não encontrado"
+
+**Situação:** O `gh` (GitHub CLI) não veio instalado no macOS.
+
+**Solução:** Fizemos autenticação via Device Flow manual usando `curl`:
+
+```bash
+# 1. Solicitar código
+curl -s -X POST -H "Accept: application/json" \
+  -d "client_id=178c6fc778ccc68e1d6a&scope=repo,read:org,gist" \
+  https://github.com/login/device/code
+
+# 2. Usuário acessa https://github.com/login/device e insere o código
+
+# 3. Polling para obter o token
+curl -s -X POST -H "Accept: application/json" \
+  -d "client_id=178c6fc778ccc68e1d6a&device_code=XXXX&grant_type=urn:ietf:params:oauth:grant-type:device_code" \
+  https://github.com/login/oauth/access_token
+```
+
+O token é salvo em `~/.config/gh/hosts.yml`.
+
+---
+
+### ❌ Erro: "LoadAnimation requires an Animation object"
+
+**Situação:** Tentamos adicionar animação de caminhada nos NPCs usando `Animator:LoadAnimation()` com um local `KeyframeSequence`, mas o Roblox rejeita.
+
+**Causa:** O Roblox exige que animações sejam assets hospedados no servidor (Animation IDs), não aceita KeyframeSequence local.
+
+**Solução:** Usamos `Humanoid:MoveTo()` para movimentação — o Humanoid R6 já tem animação de caminhada embutida que toca automaticamente ao se mover.
+
+---
+
+### ❌ Erro: "Edit datamodel is not available in Play mode"
+
+**Situação:** Tentamos executar scripts de edição enquanto o jogo estava rodando.
+
+**Solução:** Sempre parar o playtest antes de editar:
+
+```lua
+-- Use o parâmetro correto
+datamodel_type: "Edit"  -- para editar
+datamodel_type: "Client" -- para rodar no cliente
+datamodel_type: "Server" -- para rodar no servidor
+```
+
+Ou use a ferramenta `start_stop_play` com `is_start: false` antes de editar.
+
+---
+
+### ❌ Erro: Scripts com sintaxe Lua inválida
+
+**Situação:** O assistente às vezes gerava código com erros (ex: `Enum.Material.Skin` não existe).
+
+**Solução:** Sempre verifique o código antes de executar. Se der erro, corrija e tente novamente.
+
+Materiais válidos comuns:
+- `Enum.Material.SmoothPlastic`
+- `Enum.Material.Concrete`
+- `Enum.Material.Brick`
+- `Enum.Material.Wood`
+- `Enum.Material.Grass`
+- `Enum.Material.Marble`
+- `Enum.Material.Slate`
+- `Enum.Material.Glass`
+- `Enum.Material.Metal`
+- `Enum.Material.Neon`
+
+---
+
+### ❌ Erro: Pedestres não se movem após edição
+
+**Situação:** Os pedestres foram criados mas ficaram parados.
+
+**Causa:** O script de movimentação só funciona em Play Mode.
+
+**Solução:** Colocamos o script de controle no `ServerScriptService` para rodar automaticamente quando o jogo inicia.
+
+---
+
+### ❌ Erro: GitHub token não persiste
+
+**Situação:** Após obter o token via device flow, o git não conseguia fazer push.
+
+**Solução:** Salvamos as credenciais em `~/.git-credentials`:
+
+```bash
+git config --global credential.helper store
+echo "https://usuario:token@github.com" > ~/.git-credentials
+chmod 600 ~/.git-credentials
+```
+
+---
+
+### ❌ Erro: Modelo "3 trees" tinha árvores mal posicionadas
+
+**Situação:** Ao inserir o modelo "3 trees", as árvores ficaram em posições erradas.
+
+**Solução:** Sempre inspecione o modelo antes de posicionar:
+- Use `search_game_tree` para ver a hierarquia
+- Use `inspect_instance` para ver posições
+- Use `WorldPivot` para mover modelos
 
 ---
 
